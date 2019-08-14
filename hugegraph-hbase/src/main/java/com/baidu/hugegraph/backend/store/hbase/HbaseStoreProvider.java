@@ -60,7 +60,8 @@ public class HbaseStoreProvider extends AbstractBackendStoreProvider {
          * [1.6] #680: update index element-id to bin format
          * [1.7] #746: support userdata for indexlabel
          * [1.8] #820: store vertex properties in one column
+         * [1.9] #295: support ttl for edge label
          */
-        return "1.8";
+        return "1.9";
     }
 }
