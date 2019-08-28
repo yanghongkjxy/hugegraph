@@ -457,7 +457,7 @@ public class TaskScheduler {
             }
         }
 
-        protected void initSchema() {
+        public void initSchema() {
             HugeGraph graph = this.graph();
             VertexLabel label = graph.schemaTransaction().getVertexLabel(TASK);
             if (label != null) {

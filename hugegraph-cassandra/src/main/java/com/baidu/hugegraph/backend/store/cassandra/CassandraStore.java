@@ -145,8 +145,10 @@ public abstract class CassandraStore
                     "Keyspace '%s' does not exist", this.keyspace))) {
                     throw e;
                 }
-                LOG.info("Failed to connect keyspace: {}, " +
-                         "try to init keyspace later", this.keyspace);
+                if (this.isSchemaStore()) {
+                    LOG.info("Failed to connect keyspace: {}, " +
+                             "try to init keyspace later", this.keyspace);
+                }
             }
         } catch (Throwable e) {
             try {
@@ -580,6 +582,11 @@ public abstract class CassandraStore
             CassandraSessionPool.Session session = super.sessions.session();
             return this.counters.getCounter(session, type);
         }
+
+        @Override
+        public boolean isSchemaStore() {
+            return true;
+        }
     }
 
     public static class CassandraGraphStore extends CassandraStore {
@@ -630,6 +637,11 @@ public abstract class CassandraStore
         public long getCounter(HugeType type) {
             throw new UnsupportedOperationException(
                       "CassandraGraphStore.getCounter()");
+        }
+
+        @Override
+        public boolean isSchemaStore() {
+            return false;
         }
     }
 }

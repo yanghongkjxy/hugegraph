@@ -143,8 +143,10 @@ public abstract class HbaseStore extends AbstractBackendStore<Session> {
                 LOG.error("Failed to open HBase '{}'", this.store, e);
                 throw new ConnectionException("Failed to connect to HBase", e);
             }
-            LOG.info("Failed to open HBase '{}' with database '{}', " +
-                     "try to init CF later", this.store, this.namespace);
+            if (this.isSchemaStore()) {
+                LOG.info("Failed to open HBase '{}' with database '{}', " +
+                         "try to init CF later", this.store, this.namespace);
+            }
         }
 
         this.sessions.session();
@@ -390,6 +392,11 @@ public abstract class HbaseStore extends AbstractBackendStore<Session> {
             super.checkOpened();
             return this.counters.getCounter(super.sessions.session(), type);
         }
+
+        @Override
+        public boolean isSchemaStore() {
+            return true;
+        }
     }
 
     public static class HbaseGraphStore extends HbaseStore {
@@ -426,6 +433,11 @@ public abstract class HbaseStore extends AbstractBackendStore<Session> {
                                  new HbaseTables.ShardIndex(store));
             registerTableManager(HugeType.UNIQUE_INDEX,
                                  new HbaseTables.UniqueIndex(store));
+        }
+
+        @Override
+        public boolean isSchemaStore() {
+            return false;
         }
 
         @Override
