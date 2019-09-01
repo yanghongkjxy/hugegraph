@@ -76,6 +76,7 @@ public class IndexLabelBuilder implements IndexLabel.Builder {
         Id id = this.transaction.validOrGenerateId(HugeType.INDEX_LABEL,
                                                    this.id, this.name);
         HugeGraph graph = this.transaction.graph();
+        this.checkFields4Range();
         IndexLabel indexLabel = new IndexLabel(graph, id, this.name);
         indexLabel.baseType(this.baseType);
         SchemaLabel schemaLabel = this.loadElement();
@@ -336,34 +337,7 @@ public class IndexLabelBuilder implements IndexLabel.Builder {
 
         // Range index must build on single numeric column
         if (this.indexType == IndexType.RANGE) {
-            E.checkArgument(fields.size() == 1,
-                            "Range index can only build on " +
-                            "one field, but got %s fields: '%s'",
-                            fields.size(), fields);
-            String field = fields.iterator().next();
-            DataType dataType = this.transaction.getPropertyKey(field)
-                                                .dataType();
-            E.checkArgument(dataType.isNumber() || dataType.isDate(),
-                            "Range index can only build on numeric or " +
-                            "date property, but got %s(%s)", dataType, field);
-            switch (dataType) {
-                case BYTE:
-                case INT:
-                    this.indexType = IndexType.RANGE_INT;
-                    break;
-                case FLOAT:
-                    this.indexType = IndexType.RANGE_FLOAT;
-                    break;
-                case LONG:
-                case DATE:
-                    this.indexType = IndexType.RANGE_LONG;
-                    break;
-                case DOUBLE:
-                    this.indexType = IndexType.RANGE_DOUBLE;
-                    break;
-                default:
-                    throw new AssertionError("Invalid datatype: " + dataType);
-            }
+            this.checkFields4Range();
         }
 
         // Search index must build on single text column
@@ -378,6 +352,41 @@ public class IndexLabelBuilder implements IndexLabel.Builder {
             E.checkArgument(dataType.isText(),
                             "Search index can only build on text property, " +
                             "but got %s(%s)", dataType, field);
+        }
+    }
+
+    private void checkFields4Range() {
+        if (this.indexType != IndexType.RANGE) {
+            return;
+        }
+        List<String> fields = this.indexFields;
+        E.checkArgument(fields.size() == 1,
+                        "Range index can only build on " +
+                        "one field, but got %s fields: '%s'",
+                        fields.size(), fields);
+        String field = fields.iterator().next();
+        DataType dataType = this.transaction.getPropertyKey(field)
+                                            .dataType();
+        E.checkArgument(dataType.isNumber() || dataType.isDate(),
+                        "Range index can only build on numeric or " +
+                        "date property, but got %s(%s)", dataType, field);
+        switch (dataType) {
+            case BYTE:
+            case INT:
+                this.indexType = IndexType.RANGE_INT;
+                break;
+            case FLOAT:
+                this.indexType = IndexType.RANGE_FLOAT;
+                break;
+            case LONG:
+            case DATE:
+                this.indexType = IndexType.RANGE_LONG;
+                break;
+            case DOUBLE:
+                this.indexType = IndexType.RANGE_DOUBLE;
+                break;
+            default:
+                throw new AssertionError("Invalid datatype: " + dataType);
         }
     }
 
