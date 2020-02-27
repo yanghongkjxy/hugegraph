@@ -1656,9 +1656,9 @@ public class GraphTransaction extends IndexableTransaction {
             }
             throw e;
         }
-        // If EXPIRED_SYNC_DELETION is true, wait async thread done before
+        // If SYNC_DELETION is true, wait async thread done before
         // continue. This is used when running tests.
-        if (graph.configuration().get(CoreOptions.EXPIRED_SYNC_DELETION)) {
+        if (graph.configuration().get(CoreOptions.SYNC_DELETION)) {
             task.syncWait();
         }
     }
