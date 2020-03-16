@@ -481,9 +481,9 @@ public class SchemaTransaction extends IndexableTransaction {
                                                .dependencies(dependencies);
         HugeTask<?> task = builder.schedule();
 
-        // If SYNC_DELETION is true, wait async thread done before
+        // If TASK_SYNC_DELETION is true, wait async thread done before
         // continue. This is used when running tests.
-        if (graph.configuration().get(CoreOptions.SYNC_DELETION)) {
+        if (graph.configuration().get(CoreOptions.TASK_SYNC_DELETION)) {
             task.syncWait();
         }
         return task.id();

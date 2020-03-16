@@ -438,7 +438,8 @@ public abstract class InMemoryDBStore
             return false;
         }
 
-        @Override public boolean supportsTtl() {
+        @Override
+        public boolean supportsTtl() {
             return false;
         }
     };
