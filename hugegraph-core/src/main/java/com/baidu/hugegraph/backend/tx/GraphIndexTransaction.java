@@ -129,9 +129,10 @@ public class GraphIndexTransaction extends AbstractTransaction {
         // Update label index if backend store not supports label-query
         HugeIndex index = new HugeIndex(IndexLabel.label(element.type()));
         index.fieldValues(element.schemaLabel().id().asLong());
-        index.elementIds(element.id());
         if (element.type().isEdge()) {
-            index.expiredTime(((HugeEdge) element).expiredTime());
+            index.elementIds(element.id(), ((HugeEdge) element).expiredTime());
+        } else {
+            index.elementIds(element.id());
         }
 
         if (removed) {
@@ -286,8 +287,7 @@ public class GraphIndexTransaction extends AbstractTransaction {
                              Id elementId, long expiredTime, boolean removed) {
         HugeIndex index = new HugeIndex(indexLabel);
         index.fieldValues(propValue);
-        index.elementIds(elementId);
-        index.expiredTime(expiredTime);
+        index.elementIds(elementId, expiredTime);
 
         if (removed) {
             this.doEliminate(this.serializer.writeIndex(index));
@@ -323,10 +323,7 @@ public class GraphIndexTransaction extends AbstractTransaction {
             if (exist) {
                 HugeIndex index = this.serializer.readIndex(graph(), query,
                                                             iterator.next());
-                if (index == null) {
-                    // Index is expired
-                    return false;
-                }
+                this.removeExpiredIndexIfNeeded(index, query.showExpired());
                 // Memory backend might return empty BackendEntry
                 if (index.elementIds().isEmpty()) {
                     return false;
@@ -577,6 +574,7 @@ public class GraphIndexTransaction extends AbstractTransaction {
                        entries.hasNext()) {
                     HugeIndex index = this.serializer.readIndex(graph(), query,
                                                                 entries.next());
+                    this.removeExpiredIndexIfNeeded(index, query.showExpired());
                     ids.addAll(index.elementIds());
                     Query.checkForceCapacity(ids.size());
                 }
@@ -585,6 +583,20 @@ public class GraphIndexTransaction extends AbstractTransaction {
                 locks.unlock();
             }
         });
+    }
+
+    private void removeExpiredIndexIfNeeded(HugeIndex index,
+                                            boolean showExpired) {
+        if (graph().graphTransaction().store().features().supportsTtl() ||
+            showExpired) {
+            return;
+        }
+        for (HugeIndex.IdWithExpiredTime id : index.expiredElementIds()) {
+            HugeIndex removeIndex = index.clone();
+            removeIndex.resetElementIds();
+            removeIndex.elementIds(id.id(), id.expiredTime());
+            GraphTransaction.asyncDeleteExpiredObject(graph(), removeIndex);
+        }
     }
 
     @Watched(prefix = "index")
@@ -602,10 +614,7 @@ public class GraphIndexTransaction extends AbstractTransaction {
             while (entries.hasNext()) {
                 HugeIndex index = this.serializer.readIndex(graph(), query,
                                                             entries.next());
-                if (index == null) {
-                    // Index is expired
-                    continue;
-                }
+                this.removeExpiredIndexIfNeeded(index, query.showExpired());
                 ids.addAll(index.elementIds());
                 if (query.reachLimit(ids.size())) {
                     break;
@@ -1518,10 +1527,7 @@ public class GraphIndexTransaction extends AbstractTransaction {
                     while (it.hasNext()) {
                         HugeIndex index = serializer.readIndex(graph(), q,
                                                                it.next());
-                        if (index == null) {
-                            // Index is expired
-                            continue;
-                        }
+                        tx.removeExpiredIndexIfNeeded(index, q.showExpired());
                         if (index.elementIds().contains(element.id())) {
                             index.resetElementIds();
                             index.elementIds(element.id());

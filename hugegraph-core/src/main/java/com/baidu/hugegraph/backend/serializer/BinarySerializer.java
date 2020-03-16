@@ -40,7 +40,6 @@ import com.baidu.hugegraph.backend.query.Query;
 import com.baidu.hugegraph.backend.serializer.BinaryBackendEntry.BinaryId;
 import com.baidu.hugegraph.backend.store.BackendEntry;
 import com.baidu.hugegraph.backend.store.BackendEntry.BackendColumn;
-import com.baidu.hugegraph.backend.tx.GraphTransaction;
 import com.baidu.hugegraph.schema.EdgeLabel;
 import com.baidu.hugegraph.schema.IndexLabel;
 import com.baidu.hugegraph.schema.PropertyKey;
@@ -65,7 +64,6 @@ import com.baidu.hugegraph.type.define.IndexType;
 import com.baidu.hugegraph.type.define.SchemaStatus;
 import com.baidu.hugegraph.type.define.SerialEnum;
 import com.baidu.hugegraph.util.Bytes;
-import com.baidu.hugegraph.util.DateUtil;
 import com.baidu.hugegraph.util.E;
 import com.baidu.hugegraph.util.JsonUtil;
 import com.baidu.hugegraph.util.NumericUtil;
@@ -365,7 +363,6 @@ public class BinarySerializer extends AbstractSerializer {
     protected void parseIndexName(HugeGraph graph, ConditionQuery query,
                                   BinaryBackendEntry entry,
                                   HugeIndex index, Object fieldValues) {
-        long now = DateUtil.now().getTime();
         for (BackendColumn col : entry.columns()) {
             if (indexFieldValuesUnmatched(col.value, fieldValues)) {
                 // Skip if field-values is not matched (just the same hash)
@@ -376,17 +373,7 @@ public class BinarySerializer extends AbstractSerializer {
                 buffer.readIndexId(index.type());
             }
             long expiredTime = buffer.readVLong();
-            if (!graph.graphTransaction().store().features().supportsTtl() &&
-                !query.showExpired() &&
-                0L < expiredTime && expiredTime < now) {
-                HugeIndex removeIndex = index.clone();
-                removeIndex.expiredTime(expiredTime);
-                removeIndex.resetElementIds();
-                removeIndex.elementIds(buffer.readId());
-                GraphTransaction.asyncDeleteExpiredObject(graph, removeIndex);
-            } else {
-                index.elementIds(buffer.readId());
-            }
+            index.elementIds(buffer.readId(), expiredTime);
         }
     }
 
